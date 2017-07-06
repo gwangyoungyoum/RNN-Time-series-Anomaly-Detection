@@ -103,12 +103,9 @@ class RNNModel_timeDiff(nn.Module):
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input, hidden):
-        #x = input.clone()
-        #quotient = input.floor()
-        #remainder = input - quotient
-        #input_divided = torch.cat((quotient,remainder),1)
-        emb = self.drop(self.encoder(input))
-        output, hidden = self.rnn(emb.unsqueeze(0), hidden)
+        #emb = self.drop(self.encoder(input))
+        emb = self.drop(self.encoder(input.contiguous().view(input.size(0)*input.size(1),1)))
+        output, hidden = self.rnn(emb.view(input.size(1),input.size(0),self.nhid), hidden)
         output = self.drop(output)
 
         decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))

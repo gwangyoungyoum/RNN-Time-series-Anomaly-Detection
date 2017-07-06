@@ -5,15 +5,17 @@ import time
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-
+import random
 import data
 from model import model
+from torch import optim
 from matplotlib import pyplot as plt
+import shutil
 
 parser = argparse.ArgumentParser(description='PyTorch RNN Language Model on PenTreeBank/Kohyoung Dataset')
-parser.add_argument('--data', type=str, default='ky',
+parser.add_argument('--data', type=str, default='nyc_taxi',
                     help='type of the dataset')
-parser.add_argument('--model', type=str, default='RNN_TANH',
+parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU)')
 parser.add_argument('--emsize', type=int, default=200,
                     help='size of word embeddings')
@@ -25,11 +27,11 @@ parser.add_argument('--lr', type=float, default=5,
                     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
-parser.add_argument('--epochs', type=int, default=40,
+parser.add_argument('--epochs', type=int, default=1000,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
-parser.add_argument('--bptt', type=int, default=35,
+parser.add_argument('--bptt', type=int, default=50,
                     help='sequence length')
 parser.add_argument('--dropout', type=float, default=0.2,
                     help='dropout applied to layers (0 = no dropout)')
@@ -39,10 +41,17 @@ parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
 parser.add_argument('--cuda', type=bool, default=True,
                     help='use CUDA')
-parser.add_argument('--log-interval', type=int, default=100, metavar='N',
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='report interval')
 parser.add_argument('--save', type=str,  default='model.pt',
                     help='path to save the final model')
+parser.add_argument('--resume','-r',
+                    help='use checkpoint model parameters as initial parameters (default: False)',
+                    action="store_true")
+parser.add_argument('--pretrained','-p',
+                    help='use checkpoint model parameters and do not train anymore (default: False)',
+                    action="store_true")
+
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -60,7 +69,8 @@ if args.data == 'ptb':
     corpus = data.Corpus('./dataset/ptb/')
 elif args.data == 'ky':
     corpus = data.Corpus_ky_timeDifference('./dataset/ky/')
-
+elif args.data == 'nyc_taxi':
+    corpus = data.Corpus_nyc_taxi('./dataset/nyc_taxi/')
 
 
 
@@ -88,9 +98,10 @@ test_data_timeDiff = batchify(corpus.test_timeDiff, eval_batch_size)
 
 ntokens = len(corpus.dictionary)
 model2_for_timeDiff = model.RNNModel_timeDiff(args.model, 1, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
+print list(model2_for_timeDiff.parameters())
 if args.cuda:
     model2_for_timeDiff.cuda()
-
+model2_optimizer = optim.Adam(model2_for_timeDiff.parameters(), lr= 0.0001)
 criterion_for_timeDiff = nn.MSELoss()
 ###############################################################################
 # Training code
@@ -118,12 +129,14 @@ def evaluate(data_source):
     hidden = model2_for_timeDiff.init_hidden(eval_batch_size)
     for nbatch, i in enumerate(range(0, data_source.size(0) - 1, args.bptt)):
         data2_timeDiff, targets2_timeDiff = get_batch(data_source, i, evaluation=True)
-        outputs2_timeDiffs = []
-        for j in range(data2_timeDiff.size(0)):
-            output2_timeDiff, hidden = model2_for_timeDiff.forward(data2_timeDiff[j].unsqueeze(0).t(), hidden)
-            outputs2_timeDiffs.append(output2_timeDiff)
 
-        outputs2_timeDiffs = torch.cat(outputs2_timeDiffs, 0)
+        #outputs2_timeDiffs = []
+        #for j in range(data2_timeDiff.size(0)):
+        #    output2_timeDiff, hidden = model2_for_timeDiff.forward(data2_timeDiff[j].unsqueeze(0).t(), hidden)
+        #    outputs2_timeDiffs.append(output2_timeDiff)
+        #outputs2_timeDiffs = torch.cat(outputs2_timeDiffs, 0)
+        outputs2_timeDiffs, hidden = model2_for_timeDiff.forward(data2_timeDiff.view(data2_timeDiff.size(1),data2_timeDiff.size(0)),hidden)
+
         loss2_for_timeDiff = criterion_for_timeDiff(outputs2_timeDiffs.view(-1, 1), targets2_timeDiff)
         hidden = repackage_hidden(hidden)
         total_loss+= loss2_for_timeDiff.data
@@ -145,11 +158,14 @@ def train():
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         hidden = repackage_hidden(hidden)
         model2_for_timeDiff.zero_grad()
-        outputs2_timeDiffs=[]
-        for j in range(data2_timeDiff.size(0)):
-            output2_timeDiff, hidden = model2_for_timeDiff.forward(data2_timeDiff[j].unsqueeze(0).t(), hidden)
-            outputs2_timeDiffs.append(output2_timeDiff)
-        outputs2_timeDiffs = torch.cat(outputs2_timeDiffs,0)
+
+        #outputs2_timeDiffs=[]
+        #for j in range(data2_timeDiff.size(0)):
+        #    output2_timeDiff, hidden = model2_for_timeDiff.forward(data2_timeDiff[j].unsqueeze(0).t(), hidden)
+        #    outputs2_timeDiffs.append(output2_timeDiff)
+        #outputs2_timeDiffs = torch.cat(outputs2_timeDiffs,0)
+
+        outputs2_timeDiffs, hidden = model2_for_timeDiff.forward(data2_timeDiff.view(data2_timeDiff.size(1),data2_timeDiff.size(0)),hidden)
 
         loss2_for_timeDiff = criterion_for_timeDiff(outputs2_timeDiffs.view(-1, 1), targets2_timeDiff)
         loss = loss2_for_timeDiff
@@ -157,9 +173,10 @@ def train():
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         torch.nn.utils.clip_grad_norm(model2_for_timeDiff.parameters(), args.clip)
+        model2_optimizer.step()
 
-        for p in model2_for_timeDiff.parameters():
-            p.data.add_(-lr, p.grad.data)
+        #for p in model2_for_timeDiff.parameters():
+        #    p.data.add_(-lr, p.grad.data)
 
 
         total_loss += loss.data
@@ -174,35 +191,58 @@ def train():
             total_loss = 0
             start_time = time.time()
 
+def save_checkpoint(state, is_best, filename='./save/nyc_taxi/checkpoint.pth.tar'):
+    print("=> saving checkpoint ..")
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, './save/nyc_taxi/model_best.pth.tar')
+    print('=> checkpoint saved.')
+
 # Loop over epochs.
 lr = args.lr
 best_val_loss = None
+teacher_forcing_ratio = 1
 
+if args.resume or args.pretrained:
+    print("=> loading checkpoint ")
+    checkpoint = torch.load('./save/'+args.data+'/checkpoint.pth.tar')
+    args.start_epoch = checkpoint['epoch']
+    best_loss = checkpoint['best_loss']
+    model2_for_timeDiff.load_state_dict(checkpoint['model2_state_dict'])
+    model2_optimizer.load_state_dict((checkpoint['model2_optimizer']))
+    del checkpoint
+    print("=> loaded checkpoint")
+    pass
+else:
+    print("=> Start training from scratch")
 # At any point you can hit Ctrl + C to break out of training early.
-try:
-    for epoch in range(1, args.epochs+1):
-        epoch_start_time = time.time()
-        train()
-        val_loss = evaluate(val_data_timeDiff)
-        print('-' * 89)
-        print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.4f} | '.format(epoch, (time.time() - epoch_start_time),
-                                           val_loss))
-        print('-' * 89)
-        # Save the model if the validation loss is the best we've seen so far.
-        if not best_val_loss or val_loss < best_val_loss:
-            with open('./save/'+ args.data +'/'+ args.save, 'wb') as f:
-                torch.save(model2_for_timeDiff, f)
-            best_val_loss = val_loss
-        else:
-            # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            lr /= 4.0
-except KeyboardInterrupt:
-    print('-' * 89)
-    print('Exiting from training early')
+save_interval=10
+if not args.pretrained:
+    try:
+        for epoch in range(1, args.epochs+1):
+            epoch_start_time = time.time()
+            train()
+            val_loss = evaluate(val_data_timeDiff)
+            print('-' * 89)
+            print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.4f} | '.format(epoch, (time.time() - epoch_start_time),
+                                               val_loss))
+            print('-' * 89)
+            if epoch%save_interval==0:
+                # Save the model if the validation loss is the best we've seen so far.
+                is_best = val_loss > best_val_loss
+                best_val_loss = max(val_loss, best_val_loss)
+                model_dictionary = {'epoch': epoch + 1,
+                                    'best_loss': best_val_loss,
+                                    'model2_state_dict': model2_for_timeDiff.state_dict(),
+                                    'model2_optimizer': model2_optimizer.state_dict(),
+                                    }
+                save_checkpoint(model_dictionary, is_best)
 
-# Load the best saved model.
-with open('./save/'+ args.data +'/'+ args.save, 'rb') as f:
-    model2_for_timeDiff = torch.load(f)
+    except KeyboardInterrupt:
+        print('-' * 89)
+        print('Exiting from training early')
+
+
 
 # Run on test data.
 test_loss = evaluate(test_data_timeDiff)

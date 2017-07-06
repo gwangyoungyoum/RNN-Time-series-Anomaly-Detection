@@ -239,3 +239,87 @@ class Corpus_ky_timeDifference(object):
 
         return indices, timeDifferences, timeDiff_mean, timeDiff_std
 
+
+class Corpus_nyc_taxi(object):
+    def __init__(self, path):
+        self.dictionary = Dictionary()
+        #self.train = self.tokenize(os.path.join(path, 'ptb.train.txt'))
+        #self.valid = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
+        #self.test = self.tokenize(os.path.join(path, 'ptb.test.txt'))
+
+        self.train_timeDiff, self.train_timeDiff_mean, self.train_timeDiff_std = self.tokenize(path + 'trainset/nyc_taxi.csv',trainData=True)
+        self.valid_timeDiff, self.valid_timeDiff_mean, self.valid_timeDiff_std  = self.tokenize(path +'validset/nyc_taxi.csv',trainData=False)
+        self.test_timeDiff, self.test_timeDiff_mean, self.test_timeDiff_std  = self.tokenize(path + 'validset/nyc_taxi.csv',trainData=False)
+
+
+
+    def tokenize(self, path,trainData=True):
+        """Tokenizes a text file."""
+        timeDifferences = []
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1]))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.1))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.2))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.3))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.4))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.5))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.6))
+        with open(path, 'r') as f:
+            for i, line in enumerate(f):
+                if i>0:
+                    line_splited = line.strip().split(',')
+                    print line_splited
+                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.7))
+
+        if trainData:
+            timeDiff_mean = np.mean(timeDifferences)
+            print 'timeDiff_mean =', timeDiff_mean
+            timeDiff_std = np.std(timeDifferences, ddof=1)
+            print 'timeDiff_std =', timeDiff_std
+        else:
+            timeDiff_mean=self.train_timeDiff_mean
+            timeDiff_std=self.train_timeDiff_std
+
+        timeDifferences = torch.FloatTensor(timeDifferences)
+        timeDifferences = (timeDifferences-timeDiff_mean) / timeDiff_std
+
+        timeDifferences_noise1 = timeDifferences + 0.1*torch.randn(timeDifferences.size(0))
+        timeDifferences_noise2 = timeDifferences + 0.2*torch.randn(timeDifferences.size(0))
+        timeDifferences = torch.cat([timeDifferences,timeDifferences_noise1],0)
+        timeDifferences = torch.cat([timeDifferences, timeDifferences_noise2], 0)
+
+        return timeDifferences, timeDiff_mean, timeDiff_std
