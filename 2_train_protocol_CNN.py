@@ -121,7 +121,7 @@ losses_test_timeDiff=[]
 ###############################################################################
 
 ntokens = len(corpus.dictionary)
-model1_for_protocol = model.CNNModel_protocol(ntoken=ntokens, ninp=args.emsize, input_length=args.bptt, kernel_sizes= [3,5,7], kernel_nums=[80, 160, 320])
+model1_for_protocol = model.CNNModel_protocol(ntoken=ntokens, ninp=args.emsize, input_length=args.bptt, kernel_sizes= [3,5,7], kernel_nums=[64, 128, 256,512])
 if args.cuda:
     model1_for_protocol.cuda()
 

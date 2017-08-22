@@ -39,11 +39,11 @@ plt.plot(losses_valid_perEpoch,'b',label='test_200_2')
 
 losses_train=[]
 losses_valid=[]
-with open('./result/ky/trial_3/losses_train_protocol.txt','r') as f:
+with open('./result/ky/trial_3_RNN(200_2LAYER)/losses_train_protocol.txt','r') as f:
     for line in f:
         losses_train.append(float(line))
 
-with open('./result/ky/trial_3/losses_valid_protocol.txt','r') as f:
+with open('./result/ky/trial_3_RNN(200_2LAYER)/losses_valid_protocol.txt','r') as f:
     for line in f:
         losses_valid.append(float(line))
 

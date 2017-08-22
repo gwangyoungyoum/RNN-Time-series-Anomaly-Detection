@@ -156,9 +156,9 @@ class CNNModel_protocol(nn.Module):
         self.convs42 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum] // reductionRatio, (kernel_size, 1), padding=(i + 1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
         self.norms43 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
         self.convs43 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum], (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
-        self.convs44 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] * 4, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
+        self.convs44 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] * 2, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
 
-        '''
+
         blockNum=3
         self.norms51 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum]) for kernel_size in kernel_sizes])
         self.convs51 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] // reductionRatio, (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
@@ -166,10 +166,10 @@ class CNNModel_protocol(nn.Module):
         self.convs52 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum] // reductionRatio, (kernel_size, 1), padding=(i + 1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
         self.norms53 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
         self.convs53 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum], (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
-        self.convs54 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum]*8, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
-        '''
+        self.convs54 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum], (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
 
-        self.decoder = nn.Linear(len(kernel_sizes) * (kernel_nums[blockNum]*4), ntoken)
+
+        self.decoder = nn.Linear(len(kernel_sizes) * (kernel_nums[blockNum]), ntoken)
 
 
     def forward(self, input):
@@ -244,7 +244,7 @@ class CNNModel_protocol(nn.Module):
 
         x = [self.convs44[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
 
-        '''
+
 
         residue = [x_.clone() for x_ in x]
         x = [self.norms51[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
@@ -260,7 +260,7 @@ class CNNModel_protocol(nn.Module):
 
 
         x = [self.convs54[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
-        '''
+        
 
 
         x = [x_.squeeze(3) for x_ in x]  # [(N,Co,W), ...]*len(Ks)
