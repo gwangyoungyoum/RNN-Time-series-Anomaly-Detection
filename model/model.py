@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 from torch.autograd import Variable
+import torch.nn.functional as F
 
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
@@ -119,3 +120,155 @@ class RNNModel_timeDiff(nn.Module):
                     Variable(weight.new(self.nlayers, bsz, self.nhid).zero_()))
         else:
             return Variable(weight.new(self.nlayers, bsz, self.nhid).zero_())
+
+class CNNModel_protocol(nn.Module):
+
+    def __init__(self, ntoken, ninp, input_length, kernel_sizes, kernel_nums, reductionRatio = 4):
+        super(CNNModel_protocol,self).__init__()
+
+        self.kernel_sizes=kernel_sizes
+        blockNum=0
+        self.encoder = nn.Embedding(ntoken, ninp)
+        self.norms1 = nn.ModuleList([nn.BatchNorm2d(1) for kernel_size in kernel_sizes])
+        self.convs1 = nn.ModuleList([nn.Conv2d(1, kernel_nums[blockNum], (kernel_size, ninp), padding=(i+1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        blockNum=0
+        self.norms21 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum]) for kernel_size in kernel_sizes])
+        self.convs21 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] // reductionRatio, (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms22 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs22 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum] // reductionRatio, (kernel_size, 1), padding=(i + 1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms23 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs23 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum], (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.convs24 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] * 2, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
+
+        blockNum=1
+        self.norms31 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum]) for kernel_size in kernel_sizes])
+        self.convs31 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] // reductionRatio, (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms32 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs32 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum] // reductionRatio, (kernel_size, 1), padding=(i + 1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms33 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs33 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum], (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.convs34 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] * 2, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
+
+        blockNum=2
+        self.norms41 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum]) for kernel_size in kernel_sizes])
+        self.convs41 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] // reductionRatio, (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms42 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs42 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum] // reductionRatio, (kernel_size, 1), padding=(i + 1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms43 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs43 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum], (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.convs44 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] * 4, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
+
+        '''
+        blockNum=3
+        self.norms51 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum]) for kernel_size in kernel_sizes])
+        self.convs51 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum] // reductionRatio, (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms52 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs52 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum] // reductionRatio, (kernel_size, 1), padding=(i + 1, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.norms53 = nn.ModuleList([nn.BatchNorm2d(kernel_nums[blockNum] // reductionRatio) for kernel_size in kernel_sizes])
+        self.convs53 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum] // reductionRatio, kernel_nums[blockNum], (1, 1), padding=(0, 0)) for i, kernel_size in enumerate(kernel_sizes)])
+        self.convs54 = nn.ModuleList([nn.Conv2d(kernel_nums[blockNum], kernel_nums[blockNum]*8, (1, 1), padding=(0, 0), stride=2) for i, kernel_size in enumerate(kernel_sizes)])
+        '''
+
+        self.decoder = nn.Linear(len(kernel_sizes) * (kernel_nums[blockNum]*4), ntoken)
+
+
+    def forward(self, input):
+
+        '''
+        # Trial 5
+        emb = self.drop(self.encoder(input)) #(batch_size,#words,wordVec)
+        x = emb.unsqueeze(1)
+        x = [conv(x) for conv in self.convs1]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms1[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_).squeeze(3) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [F.max_pool1d(x_, 2) for x_ in x]  # [(N,Co), ...]*len(Ks)
+
+        x = [x_.unsqueeze(3) for x_ in x]
+        x = [self.convs2[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms2[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_).squeeze(3) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [F.max_pool1d(x_, x_.size(2)).squeeze(2) for x_ in x]  # [(N,Co), ...]*len(Ks)
+        x = torch.cat(x, 1)
+        decoded = self.decoder(x) # (batch_size, ntoken)
+        '''
+
+        emb = self.encoder(input) #(batch_size,#words,wordVec)
+        x = emb.unsqueeze(1)
+        x = [norm(x) for norm in self.norms1]  # [(N,Co,W), ...]*len(Ks)
+        #x = [x]*len(self.kernel_sizes)
+        x = [self.convs1[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_).squeeze(3) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [F.max_pool1d(x_, 2) for x_ in x]  # [(N,Co), ...]*len(Ks)
+        x = [x_.unsqueeze(3) for x_ in x]
+
+        residue = [x_.clone() for x_ in x]
+        x = [self.norms21[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs21[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms22[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs22[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms23[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.convs23[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [x_ + residue[i] for i, x_ in enumerate(x)]
+
+        x = [self.convs24[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+
+        residue = [x_.clone() for x_ in x]
+        x = [self.norms31[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs31[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms32[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs32[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms33[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.convs33[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [x_ + residue[i] for i, x_ in enumerate(x)]
+
+        x = [self.convs34[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+
+        residue = [x_.clone() for x_ in x]
+        x = [self.norms41[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs41[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms42[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs42[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms43[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.convs43[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [x_ + residue[i] for i, x_ in enumerate(x)]
+
+
+        x = [self.convs44[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+
+        '''
+
+        residue = [x_.clone() for x_ in x]
+        x = [self.norms51[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs51[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms52[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x] #[(N,Co,W), ...]*len(Ks)
+        x = [self.convs52[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.norms53[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.relu(x_) for x_ in x]  # [(N,Co,W), ...]*len(Ks)
+        x = [self.convs53[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        x = [x_ + residue[i] for i, x_ in enumerate(x)]
+
+
+        x = [self.convs54[i](x_) for i, x_ in enumerate(x)]  # [(N,Co,W), ...]*len(Ks)
+        '''
+
+
+        x = [x_.squeeze(3) for x_ in x]  # [(N,Co,W), ...]*len(Ks)
+        x = [F.max_pool1d(x_, x_.size(2)).squeeze(2) for x_ in x]  # [(N,Co), ...]*len(Ks)
+#        x = [F.avg_pool1d(x_, x_.size(2)).squeeze(2) for x_ in x]  # [(N,Co), ...]*len(Ks)
+
+        x = torch.cat(x, 1)
+        decoded = self.decoder(x) # (batch_size, ntoken)
+
+        return decoded
+

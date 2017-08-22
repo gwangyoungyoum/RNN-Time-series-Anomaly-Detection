@@ -175,10 +175,12 @@ class Corpus_ky_timeDifference(object):
                         ErrorFileCount += 1
                         break
 
+                    '''
                     if time_diff>60: # if time_dif is longer than 10 minute
                         print 'time_diff max value is 1 minute! | time_diff {:10.2f} minute | protocol {}'.format(time_diff/60, line.strip().split(' ')[2])
                         time_diff = 60
                         TimeFixedFileCount +=1
+                    '''
                     timeDifferences.append(time_diff)
                 words += ['<pad>']
                 tokens += len(words)

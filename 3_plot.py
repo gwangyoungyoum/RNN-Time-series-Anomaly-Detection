@@ -4,11 +4,11 @@ import numpy as np
 
 losses_train=[]
 losses_valid=[]
-with open('./result/ky/trial_3/losses_train_timeDiff.txt','r') as f:
+with open('./result/ky/trial_5_CNN/losses_train_protocol.txt','r') as f:
     for line in f:
         losses_train.append(float(line))
 
-with open('./result/ky/trial_3/losses_valid_timeDiff.txt','r') as f:
+with open('./result/ky/trial_5_CNN/losses_valid_protocol.txt','r') as f:
     for line in f:
         losses_valid.append(float(line))
 
@@ -20,8 +20,8 @@ def split_list(alist, wanted_parts=1):
 
 print len(losses_train)
 print len(losses_valid)
-lists_train = split_list(losses_train, len(losses_train) / 2520)
-lists_valid = split_list(losses_valid, len(losses_valid) / 920)
+lists_train = split_list(losses_train, len(losses_train) / 3212)
+lists_valid = split_list(losses_valid, len(losses_valid) / 1272)
 
 
 losses_train_perEpoch=[]
@@ -39,11 +39,11 @@ plt.plot(losses_valid_perEpoch,'b',label='test_200_2')
 
 losses_train=[]
 losses_valid=[]
-with open('./result/ky/trial_4/losses_train_timeDiff.txt','r') as f:
+with open('./result/ky/trial_3/losses_train_protocol.txt','r') as f:
     for line in f:
         losses_train.append(float(line))
 
-with open('./result/ky/trial_4/losses_valid_timeDiff.txt','r') as f:
+with open('./result/ky/trial_3/losses_valid_protocol.txt','r') as f:
     for line in f:
         losses_valid.append(float(line))
 

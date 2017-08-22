@@ -112,7 +112,7 @@ if args.cuda:
     model2_for_timeDiff.cuda()
 
 model1_optimizer = optim.Adam(model1_for_protocol.parameters(), lr= args.lr)
-model2_optimizer = optim.Adam(model2_for_timeDiff.parameters(), lr= 0.1)
+model2_optimizer = optim.Adam(model2_for_timeDiff.parameters(), lr= 0.0001)
 
 criterion_for_protocol = nn.CrossEntropyLoss()
 criterion_for_timeDiff = nn.MSELoss()
