@@ -19,9 +19,9 @@ parser.add_argument('--data', type=str, default='ecg',
                     help='type of the dataset')
 parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, SRU)')
-parser.add_argument('--emsize', type=int, default=128,
+parser.add_argument('--emsize', type=int, default=64,
                     help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=128,
+parser.add_argument('--nhid', type=int, default=64,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
@@ -105,8 +105,8 @@ def batchify(data, bsz,data_type=args.data):
 
 
 train_dataset = batchify(TimeseriesData.trainData, args.batch_size)
-test_dataset = batchify(TimeseriesData.validData, args.eval_batch_size)
-gen_dataset = batchify(TimeseriesData.validData, 1)
+test_dataset = batchify(TimeseriesData.testData, args.eval_batch_size)
+gen_dataset = batchify(TimeseriesData.testData, 1)
 
 
 
@@ -172,16 +172,16 @@ def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
     plot2 = plt.plot(target2,
                      label='Target2', color='gray', marker='.', linestyle='--', markersize=1, linewidth=0.5)
     plot3 = plt.plot(range(startPoint), outSeq1[:startPoint],
-                     label='1-step prediction for target1', color='green', marker='.', linestyle='--', markersize=1.5, linewidth=1)
+                     label='1-step predictions for target1', color='green', marker='.', linestyle='--', markersize=1.5, linewidth=1)
     plot4 = plt.plot(range(startPoint), outSeq2[:startPoint],
-                     label='1-step prediction for target2', color='darkgreen', marker='.', linestyle='--', markersize=1.5,
+                     label='1-step predictions for target2', color='darkgreen', marker='.', linestyle='--', markersize=1.5,
                      linewidth=1)
 
     plot5 = plt.plot(range(startPoint, endPoint, 1), outSeq1[startPoint:],
-                     label='Multi-step prediction for target1', color='blue', marker='.', linestyle='--', markersize=1.5,
+                     label='Multi-step predictions for target1', color='blue', marker='.', linestyle='--', markersize=1.5,
                      linewidth=1)
     plot6 = plt.plot(range(startPoint, endPoint, 1), outSeq2[startPoint:],
-                     label='Multi-step prediction for target1', color='navy', marker='.', linestyle='--',
+                     label='Multi-step predictions for target1', color='navy', marker='.', linestyle='--',
                      markersize=1.5,linewidth=1)
     plt.xlim([1000, endPoint])
 
@@ -299,6 +299,7 @@ best_val_loss=0
 if not args.pretrained:
     try:
         for epoch in range(1, args.epochs+1):
+
             epoch_start_time = time.time()
             train(args,model,train_dataset)
             val_loss = evaluate(args,model,test_dataset)

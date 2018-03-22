@@ -148,10 +148,10 @@ def generate_output(args,epoch, model, gen_dataset, startPoint=500, endPoint=350
     plot1 = plt.plot(target,
                      label='Target',color='black',marker='.',linestyle='--', markersize=1,linewidth=0.5)
     plot2 = plt.plot(range(startPoint), outSeq[:startPoint],
-                     label='1-step prediction', color='green', marker='.', linestyle='--', markersize=1.5, linewidth=1)
+                     label='1-step predictions', color='green', marker='.', linestyle='--', markersize=1.5, linewidth=1)
 
     plot3 = plt.plot(range(startPoint, endPoint, 1), outSeq[startPoint:],
-                     label='Multi-step prediction', color='blue', marker='.', linestyle='--', markersize=1.5, linewidth=1)
+                     label='Multi-step predictions', color='blue', marker='.', linestyle='--', markersize=1.5, linewidth=1)
     plt.xlim([1500, endPoint])
     plt.xlabel('Index',fontsize=15)
     plt.ylabel('Value',fontsize=15)
