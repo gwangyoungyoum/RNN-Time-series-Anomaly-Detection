@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import random
-import data
+import preprocess_data
 from model import model
 from torch import optim
 from matplotlib import pyplot as plt
@@ -70,11 +70,7 @@ if torch.cuda.is_available():
 ###############################################################################
 # Load data
 ###############################################################################
-if args.data == 'ecg':
-    TimeseriesData = data.ECGDataLoad('./dataset/ecg/')
-
-
-
+TimeseriesData = preprocess_data.DataLoad(args.data)
 
 def batchify(data, bsz,data_type=args.data):
     if data_type == 'nyc_taxi':
@@ -130,13 +126,6 @@ criterion = nn.MSELoss()
 # Training code
 ###############################################################################
 
-def repackage_hidden(h):
-    """Wraps hidden states in new Variables, to detach them from their history."""
-    if type(h) == Variable:
-        return Variable(h.data)
-    else:
-        return tuple(repackage_hidden(v) for v in h)
-
 
 def get_batch(source, i, evaluation=False):
     seq_len = min(args.bptt, len(source) - 1 - i)
@@ -144,8 +133,7 @@ def get_batch(source, i, evaluation=False):
     target = Variable(source[i+1:i+1+seq_len]) # [ (seq_len x batch_size x feature_size) ]
     return data, target
 
-def reconstruct(seqData,mean,std):
-    return seqData*std+mean
+
 
 def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
     # Turn on evaluation mode which disables dropout.
@@ -164,19 +152,19 @@ def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
         outSeq2.append(out.data.cpu()[0][0][1])
 
     plt.figure(figsize=(10,5))
-    target1= reconstruct(gen_dataset.cpu()[:, 0, 0].numpy(),
-                         TimeseriesData.trainData['seqData1_mean'],
-                         TimeseriesData.trainData['seqData1_std'])
-    target2 = reconstruct(gen_dataset.cpu()[:, 0, 1].numpy(),
-                          TimeseriesData.trainData['seqData2_mean'],
-                          TimeseriesData.trainData['seqData2_std'])
+    target1= preprocess_data.reconstruct(gen_dataset.cpu()[:, 0, 0].numpy(),
+                                         TimeseriesData.trainData['seqData1_mean'],
+                                         TimeseriesData.trainData['seqData1_std'])
+    target2 = preprocess_data.reconstruct(gen_dataset.cpu()[:, 0, 1].numpy(),
+                                          TimeseriesData.trainData['seqData2_mean'],
+                                          TimeseriesData.trainData['seqData2_std'])
 
-    outSeq1 = reconstruct(np.array(outSeq1),
-                          TimeseriesData.trainData['seqData1_mean'],
-                          TimeseriesData.trainData['seqData1_std'])
-    outSeq2 = reconstruct(np.array(outSeq2),
-                          TimeseriesData.trainData['seqData2_mean'],
-                          TimeseriesData.trainData['seqData2_std'])
+    outSeq1 = preprocess_data.reconstruct(np.array(outSeq1),
+                                          TimeseriesData.trainData['seqData1_mean'],
+                                          TimeseriesData.trainData['seqData1_std'])
+    outSeq2 = preprocess_data.reconstruct(np.array(outSeq2),
+                                          TimeseriesData.trainData['seqData2_mean'],
+                                          TimeseriesData.trainData['seqData2_std'])
 
     plot1 = plt.plot(target1, ':r', label='target1',markersize=0.7)
     plot2 = plt.plot(target2, '--r', label='target2', markersize=0.7)
@@ -214,7 +202,7 @@ def evaluate(args, model, test_dataset):
         outSeq, hidden = model.forward(inputSeq, hidden)
 
         loss = criterion(outSeq.view(args.batch_size,-1), targetSeq.view(args.batch_size,-1))
-        hidden = repackage_hidden(hidden)
+        hidden = model.repackage_hidden(hidden)
         total_loss+= loss.data
 
     return total_loss[0] / nbatch
@@ -232,7 +220,7 @@ def train(args, model, train_dataset):
 
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        hidden = repackage_hidden(hidden)
+        hidden = model.repackage_hidden(hidden)
         optimizer.zero_grad()
         USE_TEACHER_FORCING =  random.random() < args.teacher_forcing_ratio
         if USE_TEACHER_FORCING:
@@ -271,13 +259,6 @@ def train(args, model, train_dataset):
             total_loss = 0
             start_time = time.time()
 
-def save_checkpoint(state, is_best, filename='./save/ecg/checkpoint.pth.tar'):
-    print("=> saving checkpoint ..")
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, './save/ecg/model_best.pth.tar')
-    print('=> checkpoint saved.')
-
 # Loop over epochs.
 lr = args.lr
 best_val_loss = None
@@ -306,7 +287,7 @@ if not args.pretrained:
             val_loss = evaluate(args,model,test_dataset)
             print('-' * 89)
             print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.4f} | '.format(epoch, (time.time() - epoch_start_time),
-                                               val_loss))
+                                                                                         val_loss))
             print('-' * 89)
 
             if epoch%save_interval==0:
@@ -318,7 +299,7 @@ if not args.pretrained:
                                     'state_dict': model.state_dict(),
                                     'optimizer': optimizer.state_dict(),
                                     }
-                save_checkpoint(model_dictionary, is_best)
+                model.save_checkpoint(args, model_dictionary, is_best)
             generate_output(epoch,model,gen_dataset)
 
 

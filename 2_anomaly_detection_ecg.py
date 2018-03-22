@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import random
-import data
+import preprocess_data
 from model import model
 from torch import optim
 from matplotlib import pyplot as plt
@@ -54,8 +54,7 @@ if torch.cuda.is_available():
 ###############################################################################
 # Load data
 ###############################################################################
-if args.data == 'ecg':
-    TimeseriesData = data.ECGDataLoad('./anomaly_dataset/ecg/')
+TimeseriesData = preprocess_data.DataLoad(args.data)
 
 
 
@@ -111,15 +110,6 @@ criterion = nn.MSELoss()
 ###############################################################################
 # Training code
 ###############################################################################
-
-def repackage_hidden(h):
-    """Wraps hidden states in new Variables, to detach them from their history."""
-    if type(h) == Variable:
-        return Variable(h.data)
-    else:
-        return tuple(repackage_hidden(v) for v in h)
-
-
 
 
 def fit_norm_distribution_param(args, model, train_dataset, endPoint=10000):

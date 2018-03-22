@@ -5,17 +5,36 @@ import datetime
 import numpy as np
 import shutil
 
+def normalization(seqData,max,min):
+    return (seqData -min)/(max-min)
+
+def standardization(seqData,mean,std):
+    return (seqData-mean)/std
+
+def reconstruct(seqData,mean,std):
+    return seqData*std+mean
+
+
+def DataLoad(data_type):
+    try:
+        if data_type == 'nyc_taxi':
+            return NYCDataLoad('./dataset/'+ data_type +'/')
+        elif data_type == 'ecg':
+            return ECGDataLoad('./dataset/' + data_type + '/')
+        else:
+            raise ValueError
+    except ValueError:
+        print("Uknown data type: " + data_type)
+
 
 class NYCDataLoad(object):
     def __init__(self, path,augumentation=True):
         self.augumentation=augumentation
         self.trainData = self.preprocessing(path + 'trainset/nyc_taxi.csv', trainData=True)
-        self.validData = self.preprocessing(path + 'validset/nyc_taxi.csv', trainData=False)
-
-
+        self.validData = self.preprocessing(path + 'testset/nyc_taxi.csv', trainData=False)
 
     def preprocessing(self, path, trainData=True):
-        """Tokenizes a text file."""
+        """ Read, Standardize, Augment """
         seqData = []
         timeOfDay = []
         dayOfWeek = []
@@ -51,7 +70,7 @@ class NYCDataLoad(object):
             dataset['dayOfWeek_std'] = self.trainData['dayOfWeek_std']
 
         seqData = torch.FloatTensor(seqData)
-        seqData = (seqData-dataset['seqData_mean']) / dataset['seqData_std']
+        seqData = standardization(seqData, dataset['seqData_mean'], dataset['seqData_std'])
         if self.augumentation:
             seqData_corrupted1 = seqData + 0.1*torch.randn(seqData.size(0))
             seqData_corrupted2 = seqData + 0.2*torch.randn(seqData.size(0))
@@ -60,14 +79,16 @@ class NYCDataLoad(object):
         dataset['seqData'] = seqData
 
         timeOfDay = torch.FloatTensor(timeOfDay)
-        timeOfDay = (timeOfDay - dataset['timeOfDay_mean']) / dataset['timeOfDay_std']
+        timeOfDay = standardization(timeOfDay, dataset['timeOfDay_mean'], dataset['timeOfDay_std'])
+
         if self.augumentation:
             timeOfDay_temp = torch.cat([timeOfDay, timeOfDay], 0)
             timeOfDay = torch.cat([timeOfDay, timeOfDay_temp], 0)
         dataset['timeOfDay'] = timeOfDay
 
         dayOfWeek = torch.FloatTensor(dayOfWeek)
-        dayOfWeek = (dayOfWeek - dataset['dayOfWeek_mean']) / dataset['dayOfWeek_std']
+        dayOfWeek = standardization(dayOfWeek, dataset['dayOfWeek_mean'], dataset['dayOfWeek_std'])
+
         if self.augumentation:
             dayOfWeek_temp = torch.cat([dayOfWeek, dayOfWeek], 0)
             dayOfWeek = torch.cat([dayOfWeek, dayOfWeek_temp], 0)
@@ -86,7 +107,7 @@ class ECGDataLoad(object):
 
 
     def preprocessing(self, path, trainData=True):
-        """Tokenizes a text file."""
+        """ Read, Standardize, Augment """
         seqData1 = []
         seqData2 = []
 
@@ -129,11 +150,10 @@ class ECGDataLoad(object):
                 tempSeq2 = noise_ratio * dataset['seqData2_std'] * torch.randn(seq_length)
                 seqData2 = torch.cat([seqData2, seqData2_original + tempSeq2])
 
-        seqData1 = (seqData1-dataset['seqData1_mean']) / dataset['seqData1_std']
-        seqData2 = (seqData2-dataset['seqData2_mean']) / dataset['seqData2_std']
+        seqData1 = standardization(seqData1,dataset['seqData1_mean'],dataset['seqData1_std'])
+        seqData2 = standardization(seqData2,dataset['seqData2_mean'],dataset['seqData2_std'])
 
         dataset['seqData1'] = seqData1
-
         dataset['seqData2'] = seqData2
 
 

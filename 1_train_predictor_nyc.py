@@ -6,11 +6,11 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import random
-import data
+import preprocess_data
 from model import model
 from torch import optim
 from matplotlib import pyplot as plt
-
+import numpy as np
 import shutil
 
 parser = argparse.ArgumentParser(description='PyTorch RNN Prediction Model on Time-series Dataset')
@@ -19,7 +19,7 @@ parser.add_argument('--data', type=str, default='nyc_taxi',
 parser.add_argument('--model', type=str, default='SRU',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, SRU)')
 parser.add_argument('--emsize', type=int, default=128,
-                    help='size of word embeddings')
+                    help='size of encoded features by the linear layer')
 parser.add_argument('--nhid', type=int, default=128,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=3,
@@ -70,8 +70,7 @@ if torch.cuda.is_available():
 ###############################################################################
 # Load data
 ###############################################################################
-if args.data == 'nyc_taxi':
-    TimeseriesData = data.NYCDataLoad('./dataset/nyc_taxi/')
+TimeseriesData = preprocess_data.DataLoad(args.data)
 
 
 
@@ -114,12 +113,6 @@ criterion = nn.MSELoss()
 # Training code
 ###############################################################################
 
-def repackage_hidden(h):
-    """Wraps hidden states in new Variables, to detach them from their history."""
-    if type(h) == Variable:
-        return Variable(h.data)
-    else:
-        return tuple(repackage_hidden(v) for v in h)
 
 
 def get_batch(source, i, evaluation=False):
@@ -128,7 +121,7 @@ def get_batch(source, i, evaluation=False):
     target = Variable(source[i+1:i+1+seq_len]) # [ (seq_len x batch_size x feature_size) ]
     return data, target
 
-def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
+def generate_output(args,epoch, model, gen_dataset, startPoint=500, endPoint=3500):
     # Turn on evaluation mode which disables dropout.
     model.eval()
     hidden = model.init_hidden(1)
@@ -145,14 +138,30 @@ def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
 
         outSeq.append(outValue)
 
-    plt.figure(figsize=(10,5))
-    plot1 = plt.plot(gen_dataset.cpu()[:, 0, 0].numpy(), '.r', label='target')
-    plot2 = plt.plot(range(startPoint), outSeq[:startPoint], '--g', label='1-step prediction')
-    plot3 = plt.plot(range(startPoint, endPoint, 1), outSeq[startPoint:], '--b', label='recursive prediction')
+    target= preprocess_data.reconstruct(gen_dataset.cpu()[:, 0, 0].numpy(),
+                                         TimeseriesData.trainData['seqData_mean'],
+                                         TimeseriesData.trainData['seqData_std'])
 
-    plt.xlim([0, endPoint])
+    outSeq = preprocess_data.reconstruct(np.array(outSeq),
+                                          TimeseriesData.trainData['seqData_mean'],
+                                          TimeseriesData.trainData['seqData_std'])
+
+    plt.figure(figsize=(15,5))
+    plot1 = plt.plot(target,
+                     label='Target',color='black',marker='.',linestyle='--', markersize=1,linewidth=0.5)
+    plot2 = plt.plot(range(startPoint), outSeq[:startPoint],
+                     label='1-step prediction', color='green', marker='.', linestyle='--', markersize=1.5, linewidth=1)
+
+    plot3 = plt.plot(range(startPoint, endPoint, 1), outSeq[startPoint:],
+                     label='Multi-step prediction', color='blue', marker='.', linestyle='--', markersize=1.5, linewidth=1)
+    plt.xlim([1000, endPoint-500])
+    plt.xlabel('Index',fontsize=15)
+    plt.ylabel('Value',fontsize=15)
+
+    plt.title('Time-series Prediction on ' + args.data + ' dataset', fontsize=18, fontweight='bold')
     plt.legend()
     plt.tight_layout()
+    plt.text(1020, 32000, 'Epoch: '+str(epoch),fontsize=15)
     plt.savefig('result/nyc_taxi/fig_epoch'+str(epoch)+'.png')
     #plt.show()
     plt.close()
@@ -177,7 +186,7 @@ def evaluate(args, model, test_dataset):
         outSeq, hidden = model.forward(inputSeq, hidden)
 
         loss = criterion(outSeq.view(args.batch_size,-1), targetSeq.view(args.batch_size,-1))
-        hidden = repackage_hidden(hidden)
+        hidden = model.repackage_hidden(hidden)
         total_loss+= loss.data
 
     return total_loss[0] / nbatch
@@ -195,7 +204,7 @@ def train(args, model, train_dataset):
 
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
-        hidden = repackage_hidden(hidden)
+        hidden = model.repackage_hidden(hidden)
         optimizer.zero_grad()
         USE_TEACHER_FORCING =  random.random() < args.teacher_forcing_ratio
         if USE_TEACHER_FORCING:
@@ -218,10 +227,6 @@ def train(args, model, train_dataset):
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         torch.nn.utils.clip_grad_norm(model.parameters(), args.clip)
         optimizer.step()
-
-        # for p in model2_for_timeDiff.parameters():
-        #    p.data.add_(-lr, p.grad.data)
-
         total_loss += loss.data
 
         if batch % args.log_interval == 0 and batch > 0:
@@ -234,13 +239,6 @@ def train(args, model, train_dataset):
             total_loss = 0
             start_time = time.time()
 
-def save_checkpoint(state, is_best, filename='./save/nyc_taxi/checkpoint.pth.tar'):
-    print("=> saving checkpoint ..")
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, './save/nyc_taxi/model_best.pth.tar')
-    print('=> checkpoint saved.')
-
 # Loop over epochs.
 lr = args.lr
 best_val_loss = None
@@ -251,8 +249,8 @@ if args.resume or args.pretrained:
     checkpoint = torch.load('./save/'+args.data+'/checkpoint.pth.tar')
     args.start_epoch = checkpoint['epoch']
     best_loss = checkpoint['best_loss']
-    model.load_state_dict(checkpoint['model2_state_dict'])
-    optimizer.load_state_dict((checkpoint['model2_optimizer']))
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict((checkpoint['optimizer']))
     del checkpoint
     print("=> loaded checkpoint")
     pass
@@ -281,8 +279,8 @@ if not args.pretrained:
                                     'state_dict': model.state_dict(),
                                     'optimizer': optimizer.state_dict(),
                                     }
-                save_checkpoint(model_dictionary, is_best)
-            generate_output(epoch,model,gen_dataset)
+                model.save_checkpoint(args,model_dictionary, is_best)
+            generate_output(args,epoch,model,gen_dataset[500:],startPoint=1500)
 
 
 

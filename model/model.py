@@ -3,6 +3,8 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 from cuda_functional import SRU, SRUCell
+import shutil
+
 class RNNPredictor(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
@@ -61,3 +63,17 @@ class RNNPredictor(nn.Module):
         else:
             return Variable(weight.new(self.nlayers, bsz, self.rnn_hid_size).zero_())
 
+    def repackage_hidden(self,h):
+        """Wraps hidden states in new Variables, to detach them from their history."""
+        if type(h) == Variable:
+            return Variable(h.data)
+        else:
+            return tuple(self.repackage_hidden(v) for v in h)
+
+    def save_checkpoint(self, args, state, is_best):
+        print("=> saving checkpoint ..")
+        filename = './save/' + args.data + '/checkpoint.pth.tar'
+        torch.save(state, filename)
+        if is_best:
+            shutil.copyfile(filename, './save/' + args.data + '/model_best.pth.tar')
+        print('=> checkpoint saved.')
