@@ -4,9 +4,9 @@ Anomaly detector model consisting of two-stage strategy of time-series predictio
 
 ## Requirements
 * Python 3.5+
+* Pytorch 0.3.1+
 * Numpy
 * Matplotlib
-* pandas
 
 ## Dataset
 __NYC taxi passenger count__
@@ -35,7 +35,7 @@ Train and save RNN based time-series prediction model
 ```
 2. __Anomaly detection:__
 Fit multivariate gaussian distribution on train dataset and
-calculate anomaly scores on test dataset:
+calculate anomaly scores on test dataset
 ```
     python 2_anomaly_detection_ecg.py
     python 2_anomaly_detection_nyc.py
