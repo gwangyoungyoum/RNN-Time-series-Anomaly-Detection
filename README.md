@@ -55,6 +55,7 @@ Predictions from the stacked RNN model
 Anomaly scores from the Multivariate Gaussian Distribution model
 
 ![scores1](./fig/scores_nyc_taxi.png)
+![scores2](./fig/scores_nyc_taxi_magnified.png)
 
 ## To do
 * Add more time-series data
