@@ -5,323 +5,137 @@ import datetime
 import numpy as np
 import shutil
 
-class Dictionary(object):
-    def __init__(self):
-        self.word2idx = {}
-        self.idx2word = []
-        self.add_word('<pad>')
-        self.add_word('<eos>')
+
+class NYCDataLoad(object):
+    def __init__(self, path,augumentation=True):
+        self.augumentation=augumentation
+        self.trainData = self.preprocessing(path + 'trainset/nyc_taxi.csv', trainData=True)
+        self.validData = self.preprocessing(path + 'validset/nyc_taxi.csv', trainData=False)
 
 
-    def add_word(self, word):
-        if word not in self.word2idx:
-            self.idx2word.append(word)
-            self.word2idx[word] = len(self.idx2word) - 1
-        return self.word2idx[word]
 
-    def __len__(self):
-        return len(self.idx2word)
-
-
-class Corpus(object):
-    def __init__(self, path):
-        self.dictionary = Dictionary()
-        #self.train = self.tokenize(os.path.join(path, 'ptb.train.txt'))
-        #self.valid = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
-        #self.test = self.tokenize(os.path.join(path, 'ptb.test.txt'))
-
-        self.train_protocol = self.tokenize(path + 'ptb.train.txt')
-        self.valid_protocol = self.tokenize(path + 'ptb.valid.txt')
-        self.test_protocol = self.tokenize(path + 'ptb.test.txt')
-
-    def tokenize(self, path):
+    def preprocessing(self, path, trainData=True):
         """Tokenizes a text file."""
-        print
-        #assert os.path.exists(path)
-        # Add words to the dictionary
-        with open(path, 'r') as f:
-            tokens = 0
-            for line in f:
+        seqData = []
+        timeOfDay = []
+        dayOfWeek = []
+        dataset={}
 
-                words = line.split() + ['<eos>']
-                print words
-                tokens += len(words)
-                for word in words:
-                    self.dictionary.add_word(word)
-
-        # Tokenize file content
-        with open(path, 'r') as f:
-            ids = torch.LongTensor(tokens)
-            token = 0
-            for line in f:
-                words = line.split() + ['<eos>']
-                for word in words:
-                    ids[token] = self.dictionary.word2idx[word]
-                    token += 1
-
-        return ids
-
-class Corpus_ky(object):
-    def __init__(self, path):
-        self.dictionary = Dictionary()
-        #self.train = self.tokenize(os.path.join(path, 'ptb.train.txt'))
-        #self.valid = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
-        #self.test = self.tokenize(os.path.join(path, 'ptb.test.txt'))
-
-        self.train = self.tokenize(path + 'trainset/*')
-        self.valid = self.tokenize(path +'validset/*')
-        self.test = self.tokenize(path + 'validset/*')
-
-    def tokenize(self, path):
-        """Tokenizes a text file."""
-        #assert os.path.exists(path)
-        # Add words to the dictionary
-        tokens = 0
-        g = glob.glob(path)
-        for file in g:
-            with open(file, 'r') as f:
-                words=[]
-                for line in f:
-                    #print line.strip().split(' ')[2]
-                    words += [line.strip().split(' ')[2]]
-                words += ['<pad>']
-                tokens += len(words)
-                for word in words:
-                    self.dictionary.add_word(word)
-
-        # Tokenize file content
-        ids = torch.LongTensor(tokens)
-        token=0
-        g = glob.glob(path)
-        for file in g:
-            with open(file, 'r') as f:
-                words = []
-                for line in f:
-                    words += [line.strip().split(' ')[2]]
-                words += ['<pad>']
-
-                for word in words:
-                    ids[token] = self.dictionary.word2idx[word]
-                    token += 1
-
-        return ids
-
-class Corpus_ky_timeDifference(object):
-    def __init__(self, path):
-        self.dictionary = Dictionary()
-        #self.train = self.tokenize(os.path.join(path, 'ptb.train.txt'))
-        #self.valid = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
-        #self.test = self.tokenize(os.path.join(path, 'ptb.test.txt'))
-
-        self.train_protocol, self.train_timeDiff, self.train_timeDiff_mean, self.train_timeDiff_std = self.tokenize(path + 'trainset/*',trainData=True)
-        self.valid_protocol, self.valid_timeDiff, self.valid_timeDiff_mean, self.valid_timeDiff_std  = self.tokenize(path +'validset/*',trainData=False)
-        self.test_protocol, self.test_timeDiff, self.test_timeDiff_mean, self.test_timeDiff_std  = self.tokenize(path + 'validset/*',trainData=False)
-
-    def getTimeDifference(self,line_splited, prevTime):
-
-
-        line_splited[0] = line_splited[0][1:]
-        line_date = [line_splited[0][:4], line_splited[0][4:6], line_splited[0][6:]]
-        line_splited[1] = line_splited[1][:len(line_splited[1]) - 2]
-        line_time = line_splited[1].split(':')
-        nowTime = datetime.datetime(int(line_date[0]), int(line_date[1]), int(line_date[2]),
-                                    int(line_time[0]), int(line_time[1]), int(line_time[2]), int(line_time[3]))
-
-        time_diff = (nowTime - prevTime).total_seconds() #* 1000
-
-
-        return time_diff, nowTime
-
-    def tokenize(self, path,trainData=True):
-        """Tokenizes a text file."""
-        #assert os.path.exists(path)
-        # Add words to the dictionary
-        tokens = 0
-        timeDifferences = []
-        prevTime = datetime.datetime.today()
-        g = glob.glob(path)
-        ErrorFileCount=0
-        TimeFixedFileCount=0
-        maxValue=0
-        for file in g:
-            with open(file, 'r') as f:
-                words=[]
+        noise_val=0.8 if self.augumentation else 0.1
+        for std in np.arange(0,noise_val,0.1):
+            with open(path, 'r') as f:
                 for i, line in enumerate(f):
-                    #print line.strip().split(' ')[2]
+                    if i > 0:
+                        line_splited = line.strip().split(',')
+                        # print line_splited
+                        seqData.append(float(line_splited[1]) + np.random.normal(0, std))
+                        timeOfDay.append(float(line_splited[2]))
+                        dayOfWeek.append(float(line_splited[3]))
 
-                    try:
-                        time_diff, prevTime = self.getTimeDifference(line.strip().split(' '), prevTime)
-                    except:
-                        print 'file reading error from:',file
-                        ErrorFileCount += 1
-                        shutil.move(file,os.path.dirname(file)+'/../wrongFormatset/'+os.path.basename(file))
-                        break
-                    if i==0:
-                        time_diff=0.0
-
-                    words += [line.strip().split(' ')[2]]
-                    #print time_diff, line.strip().split(' ')[2]
-                    if 'operror' in line.strip().split(' ')[2]:
-                        print file
-                        print time_diff, line.strip().split(' ')[2]
-                        ErrorFileCount+=1
-                        shutil.move(file, os.path.dirname(file) + '/../anomalyset/' + os.path.basename(file))
-                        break
-                        #raw_input()
-                    elif 'OPERROR' in line.strip().split(' ')[2]:
-                        print file
-                        print time_diff, line.strip().split(' ')[2]
-                        shutil.move(file, os.path.dirname(file) + '/../anomalyset/' + os.path.basename(file))
-                        ErrorFileCount += 1
-                        break
-
-                    '''
-                    if time_diff>60: # if time_dif is longer than 10 minute
-                        print 'time_diff max value is 1 minute! | time_diff {:10.2f} minute | protocol {}'.format(time_diff/60, line.strip().split(' ')[2])
-                        time_diff = 60
-                        TimeFixedFileCount +=1
-                    '''
-                    timeDifferences.append(time_diff)
-                words += ['<pad>']
-                tokens += len(words)
-                for word in words:
-                    self.dictionary.add_word(word)
         if trainData:
-            print 'timeDiff_maxValue=', max(timeDifferences)
-            timeDiff_mean = np.mean(timeDifferences)
-            print 'timeDiff_mean =', timeDiff_mean
-            timeDiff_std = np.std(timeDifferences, ddof=1)
-            print 'timeDiff_std =', timeDiff_std
+            dataset['seqData_mean'] = np.mean(seqData)
+            dataset['seqData_std']= np.std(seqData, ddof=1)
+            dataset['timeOfDay_mean'] = np.mean(timeOfDay)
+            dataset['timeOfDay_std'] = np.std(timeOfDay,ddof=1)
+            dataset['dayOfWeek_mean'] = np.mean(dayOfWeek)
+            dataset['dayOfWeek_std'] = np.std(dayOfWeek,ddof=1)
+
+            #print 'seqData_mean =', seqData_mean
+            #print 'seqData_std =', seqData_std
         else:
-            timeDiff_mean=self.train_timeDiff_mean
-            timeDiff_std=self.train_timeDiff_std
+            dataset['seqData_mean'] = self.trainData['seqData_mean']
+            dataset['seqData_std'] = self.trainData['seqData_std']
+            dataset['timeOfDay_mean'] = self.trainData['timeOfDay_mean']
+            dataset['timeOfDay_std'] = self.trainData['timeOfDay_std']
+            dataset['dayOfWeek_mean'] = self.trainData['dayOfWeek_mean']
+            dataset['dayOfWeek_std'] = self.trainData['dayOfWeek_std']
 
-        print 'Error file count= ',ErrorFileCount
-        print 'Time fixed point count=',TimeFixedFileCount
+        seqData = torch.FloatTensor(seqData)
+        seqData = (seqData-dataset['seqData_mean']) / dataset['seqData_std']
+        if self.augumentation:
+            seqData_corrupted1 = seqData + 0.1*torch.randn(seqData.size(0))
+            seqData_corrupted2 = seqData + 0.2*torch.randn(seqData.size(0))
+            seqData = torch.cat([seqData,seqData_corrupted1],0)
+            seqData = torch.cat([seqData, seqData_corrupted2], 0)
+        dataset['seqData'] = seqData
 
-        timeDifferences=[]
-        # Tokenize file content
-        indices = torch.LongTensor(tokens)
-        print tokens
-        token=0
-        prevLine=' '
-        g = glob.glob(path)
-        for file in g:
-            with open(file, 'r') as f:
-                words = []
-                for i,line in enumerate(f):
-                    if line:
-                        words += [line.strip().split(' ')[2]]
-                        time_diff, prevTime = self.getTimeDifference(line.strip().split(' '), prevTime)
-                        if time_diff<0:
-                            timeDifferences.append(0)
-                        elif time_diff>60: # if time_dif is longer than 10 minute
-                            #print 'time_diff max value is 10 minute! | time_diff {:10.2f} minute | protocol {}'.format(time_diff/60, line.strip().split(' ')[2])
-                            time_diff=60
-                            timeDifferences.append((time_diff - timeDiff_mean) / timeDiff_std)
-                        elif i==0: #or time_diff>600:
-                            timeDifferences.append(0.0)
-                        else:
-                            timeDifferences.append((time_diff - timeDiff_mean) / timeDiff_std)
+        timeOfDay = torch.FloatTensor(timeOfDay)
+        timeOfDay = (timeOfDay - dataset['timeOfDay_mean']) / dataset['timeOfDay_std']
+        if self.augumentation:
+            timeOfDay_temp = torch.cat([timeOfDay, timeOfDay], 0)
+            timeOfDay = torch.cat([timeOfDay, timeOfDay_temp], 0)
+        dataset['timeOfDay'] = timeOfDay
 
-                        prevLine=line
+        dayOfWeek = torch.FloatTensor(dayOfWeek)
+        dayOfWeek = (dayOfWeek - dataset['dayOfWeek_mean']) / dataset['dayOfWeek_std']
+        if self.augumentation:
+            dayOfWeek_temp = torch.cat([dayOfWeek, dayOfWeek], 0)
+            dayOfWeek = torch.cat([dayOfWeek, dayOfWeek_temp], 0)
+        dataset['dayOfWeek'] = dayOfWeek
 
 
-                words += ['<pad>']
-                timeDifferences.append(0.0)
-
-                for word in words:
-                    indices[token] = self.dictionary.word2idx[word]
-                    token += 1
-        #print timeDifferences
-
-        print 'timeDiff_maxValue_normalized=', max(timeDifferences)
-        print 'timeDiff_minValue normalized=', min(timeDifferences)
-        timeDifferences = torch.FloatTensor(timeDifferences)
-
-        return indices, timeDifferences, timeDiff_mean, timeDiff_std
+        return dataset
 
 
-class Corpus_nyc_taxi(object):
-    def __init__(self, path):
-        self.dictionary = Dictionary()
-        #self.train = self.tokenize(os.path.join(path, 'ptb.train.txt'))
-        #self.valid = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
-        #self.test = self.tokenize(os.path.join(path, 'ptb.test.txt'))
-
-        self.train_timeDiff, self.train_timeDiff_mean, self.train_timeDiff_std = self.tokenize(path + 'trainset/nyc_taxi.csv',trainData=True)
-        self.valid_timeDiff, self.valid_timeDiff_mean, self.valid_timeDiff_std  = self.tokenize(path +'validset/nyc_taxi.csv',trainData=False)
-        self.test_timeDiff, self.test_timeDiff_mean, self.test_timeDiff_std  = self.tokenize(path + 'validset/nyc_taxi.csv',trainData=False)
+class ECGDataLoad(object):
+    def __init__(self, path,augumentation=True):
+        self.augumentation=augumentation
+        self.trainData = self.preprocessing(path + 'chfdb_chf13_45590_normal.txt', trainData=True)
+        self.validData = self.preprocessing(path + 'chfdb_chf13_45590.txt', trainData=False)
 
 
 
-    def tokenize(self, path,trainData=True):
+    def preprocessing(self, path, trainData=True):
         """Tokenizes a text file."""
-        timeDifferences = []
+        seqData1 = []
+        seqData2 = []
+
+        dataset={}
+
         with open(path, 'r') as f:
             for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1]))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.1))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.2))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.3))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.4))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.5))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.6))
-        with open(path, 'r') as f:
-            for i, line in enumerate(f):
-                if i>0:
-                    line_splited = line.strip().split(',')
-                    print line_splited
-                    timeDifferences.append(float(line_splited[1])+np.random.normal(0,0.7))
+                if i > 0:
+                    line_splited = line.strip().split(' ')
+                    line_splited = [x for x in line_splited if x != '']
+                    #print(line_splited)
+                    seqData1.append(float(line_splited[1].strip()))
+                    seqData2.append(float(line_splited[2].strip()))
+
 
         if trainData:
-            timeDiff_mean = np.mean(timeDifferences)
-            print 'timeDiff_mean =', timeDiff_mean
-            timeDiff_std = np.std(timeDifferences, ddof=1)
-            print 'timeDiff_std =', timeDiff_std
+            dataset['seqData1_mean'] = np.mean(seqData1)
+            dataset['seqData1_std']= np.std(seqData1, ddof=1)
+            dataset['seqData2_mean'] = np.mean(seqData2)
+            dataset['seqData2_std'] = np.std(seqData2, ddof=1)
+
+            #print 'seqData_mean =', seqData_mean
+            #print 'seqData_std =', seqData_std
         else:
-            timeDiff_mean=self.train_timeDiff_mean
-            timeDiff_std=self.train_timeDiff_std
+            dataset['seqData1_mean'] = self.trainData['seqData1_mean']
+            dataset['seqData1_std'] = self.trainData['seqData1_std']
+            dataset['seqData2_mean'] = self.trainData['seqData2_mean']
+            dataset['seqData2_std'] = self.trainData['seqData2_std']
 
-        timeDifferences = torch.FloatTensor(timeDifferences)
-        timeDifferences = (timeDifferences-timeDiff_mean) / timeDiff_std
+        seqData1 = torch.FloatTensor(seqData1)
+        seqData1_original = seqData1.clone()
+        seqData2 = torch.FloatTensor(seqData2)
+        seqData2_original = seqData2.clone()
+        seq_length = len(seqData1)
+        if self.augumentation:
+            noise_ratio=0.2
+            for i in np.arange(0,noise_ratio,0.01):
+                tempSeq1 = noise_ratio*dataset['seqData1_std']* torch.randn(seq_length)
+                seqData1 = torch.cat([seqData1,seqData1_original+tempSeq1])
+                tempSeq2 = noise_ratio * dataset['seqData2_std'] * torch.randn(seq_length)
+                seqData2 = torch.cat([seqData2, seqData2_original + tempSeq2])
 
-        timeDifferences_noise1 = timeDifferences + 0.1*torch.randn(timeDifferences.size(0))
-        timeDifferences_noise2 = timeDifferences + 0.2*torch.randn(timeDifferences.size(0))
-        timeDifferences = torch.cat([timeDifferences,timeDifferences_noise1],0)
-        timeDifferences = torch.cat([timeDifferences, timeDifferences_noise2], 0)
+        seqData1 = (seqData1-dataset['seqData1_mean']) / dataset['seqData1_std']
+        seqData2 = (seqData2-dataset['seqData2_mean']) / dataset['seqData2_std']
 
-        return timeDifferences, timeDiff_mean, timeDiff_std
+        dataset['seqData1'] = seqData1
+
+        dataset['seqData2'] = seqData2
+
+
+        return dataset
+

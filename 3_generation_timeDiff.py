@@ -101,7 +101,7 @@ losses_test_timeDiff=[]
 
 ntokens = len(corpus.dictionary)
 model2_for_timeDiff = model.RNNModel_timeDiff(args.model, 1, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
-print list(model2_for_timeDiff.parameters())
+print(list(model2_for_timeDiff.parameters()))
 if args.cuda:
     model2_for_timeDiff.cuda()
 
@@ -147,8 +147,8 @@ def generate_output(data_source_timeDiff):
         target2_timeDiff_value = data_source_timeDiff[i+1].cpu()[0]
 
         outputs2_timeDiffs.append(output2_timeDiff_value)
-        print 'output timeDiff {:9.4f} | target timeDiff {:9.4f}'\
-           .format(output2_timeDiff_value,target2_timeDiff_value)
+        print( 'output timeDiff {:9.4f} | target timeDiff {:9.4f}'\
+           .format(output2_timeDiff_value,target2_timeDiff_value))
         file.write('output timeDiff {:9.4f} | target timeDiff {:9.4f}'\
             .format(output2_timeDiff_value,target2_timeDiff_value)+'\n')
     file.close()

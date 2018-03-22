@@ -98,7 +98,7 @@ test_data_timeDiff = batchify(corpus.test_timeDiff, eval_batch_size)
 
 ntokens = len(corpus.dictionary)
 model2_for_timeDiff = model.RNNModel_timeDiff(args.model, 1, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied)
-print list(model2_for_timeDiff.parameters())
+print(list(model2_for_timeDiff.parameters()))
 if args.cuda:
     model2_for_timeDiff.cuda()
 model2_optimizer = optim.Adam(model2_for_timeDiff.parameters(), lr= 0.0001)
