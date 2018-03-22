@@ -165,22 +165,39 @@ def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
     outSeq2 = preprocess_data.reconstruct(np.array(outSeq2),
                                           TimeseriesData.trainData['seqData2_mean'],
                                           TimeseriesData.trainData['seqData2_std'])
+    plt.figure(figsize=(15,5))
 
-    plot1 = plt.plot(target1, ':r', label='target1',markersize=0.7)
-    plot2 = plt.plot(target2, '--r', label='target2', markersize=0.7)
+    plot1 = plt.plot(target1,
+                     label='Target1', color='black', marker='.', linestyle='--', markersize=1, linewidth=0.5)
+    plot2 = plt.plot(target2,
+                     label='Target2', color='gray', marker='.', linestyle='--', markersize=1, linewidth=0.5)
+    plot3 = plt.plot(range(startPoint), outSeq1[:startPoint],
+                     label='1-step prediction for target1', color='green', marker='.', linestyle='--', markersize=1.5, linewidth=1)
+    plot4 = plt.plot(range(startPoint), outSeq2[:startPoint],
+                     label='1-step prediction for target2', color='darkgreen', marker='.', linestyle='--', markersize=1.5,
+                     linewidth=1)
 
-    plot3 = plt.plot(range(startPoint), outSeq1[:startPoint], ':g', label='1-step prediction for target1')
-    plot4 = plt.plot(range(startPoint), outSeq2[:startPoint], '--g', label='1-step prediction for target2')
+    plot5 = plt.plot(range(startPoint, endPoint, 1), outSeq1[startPoint:],
+                     label='Multi-step prediction for target1', color='blue', marker='.', linestyle='--', markersize=1.5,
+                     linewidth=1)
+    plot6 = plt.plot(range(startPoint, endPoint, 1), outSeq2[startPoint:],
+                     label='Multi-step prediction for target1', color='navy', marker='.', linestyle='--',
+                     markersize=1.5,linewidth=1)
+    plt.xlim([1000, endPoint])
 
-    plot5 = plt.plot(range(startPoint, endPoint, 1), outSeq1[startPoint:], ':b', label='recursive prediction for target1')
-    plot6 = plt.plot(range(startPoint, endPoint, 1), outSeq2[startPoint:], '--b', label='recursive prediction for target2')
 
-    plt.xlim([0, endPoint])
+    plt.xlabel('Index',fontsize=15)
+    plt.ylabel('Value',fontsize=15)
+
+    plt.title('Time-series Prediction on ' + args.data + ' dataset', fontsize=18, fontweight='bold')
     plt.legend()
     plt.tight_layout()
+    plt.text(1010, 2, 'Epoch: '+str(epoch),fontsize=15)
     plt.savefig('result/ecg/fig_epoch'+str(epoch)+'.png')
     #plt.show()
     plt.close()
+
+
 
     return outSeq1
 
@@ -300,7 +317,7 @@ if not args.pretrained:
                                     'optimizer': optimizer.state_dict(),
                                     }
                 model.save_checkpoint(args, model_dictionary, is_best)
-            generate_output(epoch,model,gen_dataset)
+            generate_output(epoch,model,gen_dataset,startPoint=1500)
 
 
 

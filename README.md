@@ -10,15 +10,11 @@ Anomaly detector model consisting of two-stage strategy of time-series predictio
 
 ## Dataset
 __NYC taxi passenger count__
- * Prediction of the New York City taxi passenger data. left.
-Example portion of taxi passenger data (aggregated at 30 min
-intervals).
-  * public data stream provided by the [New
+ * The New York City taxi passenger data stream, public data stream provided by the [New
 York City Transportation Authority](http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml )
-  * preprocessed (aggregated at 30 min intervals) by Cui, Yuwei, et al. in ["A comparative study of HTM and other neural network models for online sequence learning with streaming data." Neural Networks (IJCNN), 2016 International Joint Conference on. IEEE, 2016.](http://ieeexplore.ieee.org/abstract/document/7727380/)
+ * preprocessed (aggregated at 30 min intervals) by Cui, Yuwei, et al. in ["A comparative study of HTM and other neural network models for online sequence learning with streaming data." Neural Networks (IJCNN), 2016 International Joint Conference on. IEEE, 2016.](http://ieeexplore.ieee.org/abstract/document/7727380/)
   , [code](https://github.com/numenta/htmresearch/tree/master/projects/sequence_prediction)
 
-![example](./fig/NYCexample.png)
 __Electrocardiogram (ECG)__
 
 
@@ -41,16 +37,22 @@ calculate anomaly scores on test dataset
     python 2_anomaly_detection_nyc.py
 ```
 ## Result
-* Prediction from stacked RNN
+1. __Time-series prediction:__
+Predictions from the stacked RNN model
 
 ![prediction1](./fig/prediction_nyc_taxi.gif)
 
-* Performance comparison
-  * FOS-ELM and proposed variants including OR-ELM
 
-![performanceComparison](./fig/model_performance_summary_FF0.915.png)
+![prediction2](./fig/prediction_ecg.gif)
+
+2. __Anomaly detection:__
+
+Anomaly scores from the Multivariate Gaussian Distribution model
+
+![scores1](./fig/scores_nyc_taxi.png)
 
 ## To do
-* Rewrite this code with Pytorch for GPU acceleration
+* Add more time-series data
+* Add Quantitative evaluation method such as precision, recall and F1 score.
 
 
