@@ -39,7 +39,7 @@ Train and save RNN based time-series prediction model:
 ## Result
 * Prediction from stacked RNN
 
-<a href="https://imgflip.com/gif/26waqp"><img src="https://i.imgflip.com/26waqp.gif" title="made at imgflip.com"/></a>
+![prediction1](./fig/prediction_nyc_taxi.gif)
 
 * Performance comparison
   * FOS-ELM and proposed variants including OR-ELM
