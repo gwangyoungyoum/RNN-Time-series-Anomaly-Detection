@@ -31,7 +31,7 @@ class NYCDataLoad(object):
     def __init__(self, path,augumentation=True):
         self.augumentation=augumentation
         self.trainData = self.preprocessing(path + 'trainset/nyc_taxi.csv', trainData=True)
-        self.validData = self.preprocessing(path + 'testset/nyc_taxi.csv', trainData=False)
+        self.testData = self.preprocessing(path + 'testset/nyc_taxi.csv', trainData=False)
 
     def preprocessing(self, path, trainData=True):
         """ Read, Standardize, Augment """
@@ -102,7 +102,7 @@ class ECGDataLoad(object):
     def __init__(self, path,augumentation=True):
         self.augumentation=augumentation
         self.trainData = self.preprocessing(path + 'trainset/chfdb_chf13_45590.txt', trainData=True)
-        self.validData = self.preprocessing(path + 'testset/chfdb_chf13_45590.txt', trainData=False)
+        self.testData = self.preprocessing(path + 'testset/chfdb_chf13_45590.txt', trainData=False)
 
 
 

@@ -173,7 +173,6 @@ def anomalyScore(args,model,test_dataset,mean,cov,endPoint=10000):
             errors[t] = organized[t] - test_dataset[t][0][0]
             if args.cuda:
                 errors[t] = errors[t].cuda()
-            errors[t] = errors[t]
     scores = []
     for error in errors[args.prediction_window_size:]:
         mult1 = error-mean.unsqueeze(0) # [ 1 * prediction_window_size ]

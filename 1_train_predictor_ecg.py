@@ -11,6 +11,7 @@ from model import model
 from torch import optim
 from matplotlib import pyplot as plt
 import numpy as np
+import seaborn as sns
 import shutil
 
 parser = argparse.ArgumentParser(description='PyTorch RNN Prediction Model on Time-series Dataset')
@@ -28,7 +29,7 @@ parser.add_argument('--lr', type=float, default=0.0002,
                     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
-parser.add_argument('--epochs', type=int, default=250,
+parser.add_argument('--epochs', type=int, default=100,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size')
@@ -48,8 +49,6 @@ parser.add_argument('--cuda', type=bool, default=True,
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='report interval')
-parser.add_argument('--save', type=str,  default='model.pt',
-                    help='path to save the final model')
 parser.add_argument('--resume','-r',
                     help='use checkpoint model parameters as initial parameters (default: False)',
                     action="store_true")
@@ -151,7 +150,8 @@ def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
         outSeq1.append(out.data.cpu()[0][0][0])
         outSeq2.append(out.data.cpu()[0][0][1])
 
-    plt.figure(figsize=(10,5))
+
+
     target1= preprocess_data.reconstruct(gen_dataset.cpu()[:, 0, 0].numpy(),
                                          TimeseriesData.trainData['seqData1_mean'],
                                          TimeseriesData.trainData['seqData1_std'])
@@ -185,14 +185,14 @@ def generate_output(epoch, model, gen_dataset, startPoint=500, endPoint=3500):
                      markersize=1.5,linewidth=1)
     plt.xlim([1000, endPoint])
 
-
     plt.xlabel('Index',fontsize=15)
     plt.ylabel('Value',fontsize=15)
 
-    plt.title('Time-series Prediction on ' + args.data + ' dataset', fontsize=18, fontweight='bold')
+    plt.title('Time-series Prediction on ' + args.data + ' Dataset', fontsize=18, fontweight='bold')
     plt.legend()
     plt.tight_layout()
     plt.text(1010, 2, 'Epoch: '+str(epoch),fontsize=15)
+
     plt.savefig('result/ecg/fig_epoch'+str(epoch)+'.png')
     #plt.show()
     plt.close()

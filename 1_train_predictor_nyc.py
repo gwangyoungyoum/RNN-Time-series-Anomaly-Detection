@@ -16,19 +16,19 @@ import shutil
 parser = argparse.ArgumentParser(description='PyTorch RNN Prediction Model on Time-series Dataset')
 parser.add_argument('--data', type=str, default='nyc_taxi',
                     help='type of the dataset')
-parser.add_argument('--model', type=str, default='SRU',
+parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU, SRU)')
-parser.add_argument('--emsize', type=int, default=128,
+parser.add_argument('--emsize', type=int, default=32,
                     help='size of encoded features by the linear layer')
-parser.add_argument('--nhid', type=int, default=128,
+parser.add_argument('--nhid', type=int, default=32,
                     help='number of hidden units per layer')
-parser.add_argument('--nlayers', type=int, default=3,
+parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=0.0002,
                     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
-parser.add_argument('--epochs', type=int, default=100,
+parser.add_argument('--epochs', type=int, default=50,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                     help='batch size')
@@ -48,8 +48,6 @@ parser.add_argument('--cuda', type=bool, default=True,
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='report interval')
-parser.add_argument('--save', type=str,  default='model.pt',
-                    help='path to save the final model')
 parser.add_argument('--resume','-r',
                     help='use checkpoint model parameters as initial parameters (default: False)',
                     action="store_true")
@@ -93,8 +91,8 @@ def batchify(data, bsz):
 
 
 train_dataset = batchify(TimeseriesData.trainData, args.batch_size)
-test_dataset = batchify(TimeseriesData.validData, args.eval_batch_size)
-gen_dataset = batchify(TimeseriesData.validData, 1)
+test_dataset = batchify(TimeseriesData.testData, args.eval_batch_size)
+gen_dataset = batchify(TimeseriesData.testData, 1)
 
 
 
@@ -154,14 +152,14 @@ def generate_output(args,epoch, model, gen_dataset, startPoint=500, endPoint=350
 
     plot3 = plt.plot(range(startPoint, endPoint, 1), outSeq[startPoint:],
                      label='Multi-step prediction', color='blue', marker='.', linestyle='--', markersize=1.5, linewidth=1)
-    plt.xlim([1000, endPoint-500])
+    plt.xlim([1500, endPoint])
     plt.xlabel('Index',fontsize=15)
     plt.ylabel('Value',fontsize=15)
 
-    plt.title('Time-series Prediction on ' + args.data + ' dataset', fontsize=18, fontweight='bold')
+    plt.title('Time-series Prediction on ' + args.data + ' Dataset', fontsize=18, fontweight='bold')
     plt.legend()
     plt.tight_layout()
-    plt.text(1020, 32000, 'Epoch: '+str(epoch),fontsize=15)
+    plt.text(1520, 32000, 'Epoch: '+str(epoch),fontsize=15)
     plt.savefig('result/nyc_taxi/fig_epoch'+str(epoch)+'.png')
     #plt.show()
     plt.close()
@@ -280,7 +278,7 @@ if not args.pretrained:
                                     'optimizer': optimizer.state_dict(),
                                     }
                 model.save_checkpoint(args,model_dictionary, is_best)
-            generate_output(args,epoch,model,gen_dataset[500:],startPoint=1500)
+            generate_output(args,epoch,model,gen_dataset,startPoint=2000)
 
 
 
