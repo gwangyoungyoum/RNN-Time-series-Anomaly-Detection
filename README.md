@@ -1,5 +1,7 @@
 # RNN-Time-series-Anomaly-Detection
-Anomaly detector model consisting of two-stage strategy of time-series prediction and anomaly score calculation.
+RNN based Time-series Anomaly detector model implemented in Pytorch.
+
+This is an implementation of RNN based time-series anomaly detector, which consists of two-stage strategy of time-series prediction and anomaly score calculation.
 
 
 ## Requirements
