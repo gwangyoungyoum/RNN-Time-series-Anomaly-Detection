@@ -53,6 +53,6 @@ Anomaly scores from the Multivariate Gaussian Distribution model
 
 ## To do
 * Add more time-series data
-* Add Quantitative evaluation method such as precision, recall and F1 score.
+* Add quantitative evaluation method such as precision, recall and F1 score.
 
 
