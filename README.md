@@ -7,8 +7,9 @@ Anomaly detector model consisting of two-stage strategy of time-series predictio
 * Numpy
 * Matplotlib
 * pandas
+
 ## Dataset
-* NYC taxi passenger count
+__NYC taxi passenger count__
  * Prediction of the New York City taxi passenger data. left.
 Example portion of taxi passenger data (aggregated at 30 min
 intervals).
@@ -18,7 +19,7 @@ York City Transportation Authority](http://www.nyc.gov/html/tlc/html/about/trip_
   , [code](https://github.com/numenta/htmresearch/tree/master/projects/sequence_prediction)
 
 ![example](./fig/NYCexample.png)
-* Electrocardiogram (ECG)
+__Electrocardiogram (ECG)__
 
 
 ## Implemented Algorithms
@@ -26,16 +27,19 @@ York City Transportation Authority](http://www.nyc.gov/html/tlc/html/about/trip_
 * Multivariate Gaussian distribution based anomaly detector
 
 ## Example of usage
-Train and save RNN based time-series prediction model:
-
+1. __Time-series prediction:__
+Train and save RNN based time-series prediction model
+```
     python 1_train_predictor_ecg.py
     python 1_train_predictor_nyc.py
-
- performance comparison:
-
-
-    python plotResults.py
-
+```
+2. __Anomaly detection:__
+Fit multivariate gaussian distribution on train dataset and
+calculate anomaly scores on test dataset:
+```
+    python 2_anomaly_detection_ecg.py
+    python 2_anomaly_detection_nyc.py
+```
 ## Result
 * Prediction from stacked RNN
 
