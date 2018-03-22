@@ -80,8 +80,8 @@ class NYCDataLoad(object):
 class ECGDataLoad(object):
     def __init__(self, path,augumentation=True):
         self.augumentation=augumentation
-        self.trainData = self.preprocessing(path + 'chfdb_chf13_45590_normal.txt', trainData=True)
-        self.validData = self.preprocessing(path + 'chfdb_chf13_45590.txt', trainData=False)
+        self.trainData = self.preprocessing(path + 'trainset/chfdb_chf13_45590.txt', trainData=True)
+        self.validData = self.preprocessing(path + 'testset/chfdb_chf13_45590.txt', trainData=False)
 
 
 

@@ -71,7 +71,7 @@ if torch.cuda.is_available():
 # Load data
 ###############################################################################
 if args.data == 'ecg':
-    TimeseriesData = data.ECGDataLoad('./anomaly_dataset/ecg/')
+    TimeseriesData = data.ECGDataLoad('./dataset/ecg/')
 
 
 
